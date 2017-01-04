@@ -15,7 +15,7 @@ public class XMLToGraphML {
 
 	public static void main(String[] args){
 		if(args.length < 3){
-			System.out.println("4 parameters: xmlUserFile, xmlPostFile, graphName, graphmlFile");
+			System.out.println("4 parameters: xmlUserFile, xmlPostFile, graphmlFile, graphName");
 			return;
 		}
 		String xmlUserFile = args[0];
