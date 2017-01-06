@@ -7,8 +7,8 @@ class User(object):
         self.reputation = reputation
         self.id = userid
         self.name = name
-        self.inedges = []
-        self.outedges = []
+        self.inedges = set()
+        self.outedges = set()
 
 tree = etree.parse('Users.xml')
 userlist = tree.getroot()
@@ -38,8 +38,9 @@ if 'a' in sys.argv:
             question_id = a.attrib["ParentId"]
             questioner = users[post_mapping[question_id]]
             answerer = users[a.attrib["OwnerUserId"]]
-            answerer.outedges += [questioner.id]
-            questioner.inedges += [answerer.id]
+            if answerer != questioner:
+                answerer.outedges.add(questioner.id)
+                questioner.inedges.add(answerer.id)
 	
 #comment edges	
 if 'c' in sys.argv:
@@ -48,8 +49,9 @@ if 'c' in sys.argv:
             post_id = c.attrib["PostId"]
             poster = users[post_mapping[post_id]]
             commenter = users[c.attrib["UserId"]]
-            commenter.outedges += [poster.id]
-            poster.inedges += [commenter.id]
+            if commenter != poster:
+                commenter.outedges.add(poster.id)
+                poster.inedges.add(commenter.id)
 
 #shared answers edges
 answers_mapping = {}
@@ -64,13 +66,14 @@ if 's' in sys.argv:
                 answers_mapping[question_id] = []
             for shared_answerer_id in answers_mapping[question_id]:
                 shared_answerer = users[shared_answerer_id]
-                answerer.outedges += [shared_answerer_id]
-                answerer.inedges += [shared_answerer_id]
-                shared_answerer.outedges += [answerer_id]
-                shared_answerer.inedges += [answerer_id]
+                if shared_answerer != answerer:
+                    answerer.outedges.add(shared_answerer_id)
+                    answerer.inedges.add(shared_answerer_id)
+                    shared_answerer.outedges.add(answerer_id)
+                    shared_answerer.inedges.add(answerer_id)
             answers_mapping[question_id] += [answerer_id]
 		
-relevant_users = [user for user in users.values() if len(user.inedges) + len(user.outedges) > 0]
+relevant_users = [user for user in users.values() if len(user.outedges) > 0]
 
 graphmlheader = """<?xml version="1.0" encoding="utf-8"?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns"
@@ -92,13 +95,16 @@ with open("beer.graphml", "w") as output:
 			<data key="d1">"""+str(user.reputation)+"""</data>
 		</node>""")
     i = 0
-    for answerer in relevant_users:
-        for questioner in answerer.outedges:
+    for source in relevant_users:
+        for target in source.outedges:
             output.write("""
-		<edge id="e"""+ str(i) + """\" source="n"""+ str(answerer.id) + """\" target="n"""+ questioner+"""\"/>""")
+		<edge id="e"""+ str(i) + """\" source="n"""+ str(source.id) + """\" target="n"""+ target+"""\"/>""")
             i += 1
     output.write("""
 	</graph>
 </graphml>""")
+
+print('nodes: ' + str(len(relevant_users)))
+print('edges: ' + str(i))
     
 
