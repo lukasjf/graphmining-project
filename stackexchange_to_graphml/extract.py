@@ -1,3 +1,4 @@
+import sys
 import xml.etree.ElementTree as etree
 
 
@@ -29,15 +30,46 @@ post_mapping = {}
 for p in postlist:
     if "OwnerUserId" in p.attrib:
         post_mapping[p.attrib["Id"]] = p.attrib["OwnerUserId"]
-		
-for c in commentlist:
-	if "UserId" in c.attrib and c.attrib["PostId"] in post_mapping:
-		post_id = c.attrib["PostId"]
-		poster = users[post_mapping[post_id]]
-		commenter = users[c.attrib["UserId"]]
-		commenter.outedges += [poster.id]
-		poster.inedges += [commenter.id]
+
+#answer edges
+if 'a' in sys.argv:
+    for a in [answer for answer in postlist if answer.attrib["PostTypeId"] == "2"]:
+        if "OwnerUserId" in a.attrib and a.attrib["ParentId"] in post_mapping:
+            question_id = a.attrib["ParentId"]
+            questioner = users[post_mapping[question_id]]
+            answerer = users[a.attrib["OwnerUserId"]]
+            answerer.outedges += [questioner.id]
+            questioner.inedges += [answerer.id]
 	
+#comment edges	
+if 'c' in sys.argv:
+    for c in commentlist:
+        if "UserId" in c.attrib and c.attrib["PostId"] in post_mapping:
+            post_id = c.attrib["PostId"]
+            poster = users[post_mapping[post_id]]
+            commenter = users[c.attrib["UserId"]]
+            commenter.outedges += [poster.id]
+            poster.inedges += [commenter.id]
+
+#shared answers edges
+answers_mapping = {}
+
+if 's' in sys.argv:
+    for a in [answer for answer in postlist if answer.attrib["PostTypeId"] == "2"]:
+        if "OwnerUserId" in a.attrib and a.attrib["ParentId"] in post_mapping:
+            question_id = a.attrib["ParentId"]
+            answerer_id = a.attrib["OwnerUserId"]
+            answerer = users[answerer_id]
+            if not question_id in answers_mapping:
+                answers_mapping[question_id] = []
+            for shared_answerer_id in answers_mapping[question_id]:
+                shared_answerer = users[shared_answerer_id]
+                answerer.outedges += [shared_answerer_id]
+                answerer.inedges += [shared_answerer_id]
+                shared_answerer.outedges += [answerer_id]
+                shared_answerer.inedges += [answerer_id]
+            answers_mapping[question_id] += [answerer_id]
+		
 relevant_users = [user for user in users.values() if len(user.inedges) + len(user.outedges) > 0]
 
 graphmlheader = """<?xml version="1.0" encoding="utf-8"?>
@@ -49,7 +81,7 @@ graphmlheader = """<?xml version="1.0" encoding="utf-8"?>
 	<key id="d1" for="node" attr.name="Reputation" attr.type="int"></key>"""
 
 
-with open("beer_comments.graphml", "w") as output:
+with open("beer.graphml", "w") as output:
     output.write(graphmlheader)
     output.write("""
 	<graph id="beer" edgedefault="directed">""")
