@@ -26,9 +26,19 @@ betweenness = np.asarray([v.out_degree() for v in g.vertices()])
 reputation = np.asarray([rep for rep in g.vertex_properties["Reputation"]])
 #reputation = reputation / max(reputation)
 
+X = np.asarray([[be for be in bv.a],
+	[v.out_degree() for v in g.vertices()],
+	[v.in_degree() for v in g.vertices()],
+	[p for p in pr.a],
+	#[c for c in cl.a],
+	[e for e in ev.a],
+	[k for k in kz.a],
+	[h for h in ht[1].a],
+	[h for h in ht[2].a]
+]).transpose()
 
 plt.scatter(betweenness,reputation)
-plt.show()
+#plt.show()
 """
 model = Sequential()
 model.add(Dense(13, input_dim=1, init='normal', activation='relu'))
@@ -39,9 +49,9 @@ model.fit(betweenness[:350], reputation[:350], nb_epoch=1000)
 print("result")
 print(model.evaluate(betweenness[350:], reputation[350:]))
 """
-w = tf.Variable(tf.zeros([1]))
-b = tf.Variable(tf.zeros([1]))
-mod = w * betweenness + b
+w = tf.cast(tf.Variable(tf.zeros([8,1])),tf.float64)
+b = tf.cast(tf.Variable(tf.zeros([1])), tf.float64)
+mod = tf.matmul(X,w) + b
 loss = tf.reduce_mean(tf.square(reputation-mod))
 optimizer = tf.train.GradientDescentOptimizer(0.01)
 train = optimizer.minimize(loss)
