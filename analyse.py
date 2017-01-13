@@ -6,8 +6,11 @@ from keras.models import Sequential
 from keras.layers import Dense
 
 import tensorflow as tf
+import math
 import time
 import sys
+
+np.random.seed(1234)
 
 t0 = time.time()
 g = load_graph(str(sys.argv[1]))
@@ -69,18 +72,39 @@ X = np.asarray([
     pr, bv, ev, kz, auth, hub, id, od
 ])
 
-for feature in X:
-    print(len(feature))
-    print(sum(feature==0))
+feature_names = ["bias", "pagerank", "betweenness", "eigenvector", "katz", "hits-authority", "hits-hub", "in_degree", "out_degree"] 
+
+indices = np.random.permutation(X.shape[1])
+train = indices[:len(indices)//10*7]
+test = indices[len(indices)//10*7:]
+
+for index, feature in enumerate(X[1:,]):
+    if ('verbose' in sys.argv):
+        print(len(feature))
+        print(sum(feature==0))
     plt.scatter(feature, rep)
-    plt.show()
+    plt.xlim(0)
+    plt.xlabel(feature_names[index+1])
+    plt.ylim(0)
+    plt.ylabel('reputation')
+    plt.savefig(sys.argv[1].replace('datasets/','').replace('.graphml','') + feature_names[index+1] + '.pdf')
 
-for feature in X[1:,]:
-    print(np.corrcoef(feature,rep))
+    print(np.corrcoef(feature,rep)[0,1])
 
+    data = np.asarray([X[0,],feature]).transpose()
+    training = data[train,]
+    testing = data[test,]
+    weight = np.matmul(np.matmul(np.linalg.inv(np.matmul(training.transpose(),training)),training.transpose()),rep[train])
+    prediction = np.matmul(testing,weight)
+    mse = np.dot(prediction-rep[test], prediction-rep[test]) / len(prediction)
+    mrd = sum((prediction-rep[test])/rep[test]) / len(prediction)
+    print("SE for " + feature_names[index+1] + " is: " + str(mse))
+    #print("RD for " + feature_names[index+1] + " is: " + str(mrd))
+    plt.plot(feature, feature*weight[1] + weight[0],'-')
+    plt.savefig(sys.argv[1].replace('datasets/','').replace('.graphml','') + feature_names[index+1] + '_fitted.pdf')
+    plt.clf()
+    
 
-X = X[filt]
-reputation = reputation[filt]
 """
 model = Sequential()
 model.add(Dense(13, input_dim=1, init='normal', activation='relu'))
@@ -91,5 +115,12 @@ model.fit(betweenness[:350], reputation[:350], nb_epoch=1000)
 print("result")
 print(model.evaluate(betweenness[350:], reputation[350:]))
 """
-
-w = np.matmul(np.matmul(np.linalg.inv(np.matmul(X.transpose(),X)),X.transpose()),reputation)
+X = X.transpose()
+w = np.matmul(np.matmul(np.linalg.inv(np.matmul(X[train,].transpose(),X[train,])),X[train,].transpose()),rep[train])
+prediction = np.matmul(X[test,],w)
+mse = np.dot(prediction-rep[test], prediction-rep[test]) / len(prediction)
+print("MSE for mv linear regression " + str(mse))
+rd = sum(np.absolute(prediction-rep[test])) 
+rd = rd/ np.mean(rep[test]) / len(prediction)
+print("RD for mv linear regression " + str(rd))
+print("mean " + str(np.mean(rep[test])))
