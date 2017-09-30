@@ -84,10 +84,10 @@ graphmlheader = """<?xml version="1.0" encoding="utf-8"?>
 	<key id="d1" for="node" attr.name="Reputation" attr.type="int"></key>"""
 
 
-with open("beer.graphml", "w") as output:
+with open("askubuntu.graphml", "w") as output:
     output.write(graphmlheader)
     output.write("""
-	<graph id="beer" edgedefault="directed">""")
+	<graph id="askubuntu" edgedefault="directed">""")
     for user in relevant_users:
         output.write("""
 		<node id="n"""+user.id+"""\">
